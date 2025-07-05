@@ -225,7 +225,7 @@ async def notify_about_failure(ctx: commands.Context, err: yt_dlp.utils.Download
     else:
         await ctx.send('Maaf gagal memutar lagu 😓')
     return
-
+"""BOT DIBUAT OLEH LuthfiMC269:) check me out di https://github.com/LuthfiMC269/Chilling-Amano"""
 if __name__ == '__main__':
     try:
         sys.exit(main())
