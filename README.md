@@ -13,7 +13,7 @@ Pengen dengerin lagu selama mabar pake link dari youtube, tapi bot lain pada eng
 * `.loop` - Toggle putar lagu yang sedang diputar terus menerus
   * alias `.l`
 * `.radio` - Toggle untuk memainkan radio J-POP 7/24 jam secara random
-  * alias `.l`
+  * alias `.r`
 * `.help` - Memunculkan quick help guide commands
   * alias `.h`
 
