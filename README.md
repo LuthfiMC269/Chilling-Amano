@@ -10,7 +10,9 @@ Pengen dengerin lagu selama mabar pake link dari youtube, tapi bot lain pada eng
   * alias `.p`
 * `.skip` - Skip lagu. `.skip all` untuk menghapus semua antrian lagu
   * alias `.s`
-* `.loop` - Putar lagu yang sedang diputar terus menerus
+* `.loop` - Toggle putar lagu yang sedang diputar terus menerus
+  * alias `.l`
+* `.radio` - Toggle untuk memainkan radio J-POP 7/24 jam secara random
   * alias `.l`
 * `.help` - Memunculkan quick help guide commands
   * alias `.h`
