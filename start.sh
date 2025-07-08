@@ -1,5 +1,5 @@
 #!/bin/bash
-   VENV_PATH="./.venv"
+   VENV_PATH="./venv"
    SCRIPT_PATH="bot.py"
 
    source "$VENV_PATH/bin/activate"
