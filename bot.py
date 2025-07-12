@@ -254,14 +254,14 @@ async def notify_error(ctx: commands.Context, err: yt_dlp.utils.DownloadError):
 def get_git_version():
     try:
         subprocess.check_call(['git', 'fetch'])
-        version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
-        updatever = subprocess.check_output(['git', 'rev-parse', 'origin/main']).decode().strip()
+        version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').strip()
+        updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/main']).decode('utf-8').strip()
     except Exception as e:
         return "version unknown"
     if version != updatever:
         return f"Ver. {version} 🚨 Update baru tersedia!"
     else:
-        return f" Ver. {version}"
+        return f" Ver. {version} latest"
 
 """BOT DIBUAT OLEH LuthfiMC269:) check me out di https://github.com/LuthfiMC269/Chilling-Amano"""
 if __name__ == '__main__':
