@@ -1,5 +1,4 @@
-#discord.py migrasi ke py-cord
-py-cord
+discord.py
 python-dotenv
 pynacl
 yt_dlp
