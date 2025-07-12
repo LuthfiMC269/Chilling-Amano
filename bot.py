@@ -137,11 +137,11 @@ async def skip(ctx: commands.Context, *args):
                 except FileNotFoundError: pass
         except KeyError:
             pass
-
         queues.pop(serverid, None)
         await voice_client.disconnect(force=False)
         await ctx.send("⏹️ Skip semua antrian.")
         return
+
     queue = queues.get(serverid, {}).get('queue', []) # .skip biasa
     if len(queue) <= 1: # Cuma ada 1 lagu atau kosong
         voice_client.stop()
@@ -162,10 +162,6 @@ async def loop(ctx: commands.Context):
     queues[ctx.guild.id]['loop'] = not loop1
     await ctx.send('Looping ' + ('dinyalakan' if not loop1 else 'dimatikan'))
 
-def get_voice_client_from_channel_id(channel_id: int):
-    for voice_client in bot.voice_clients:
-        if voice_client.channel == channel_id:
-            return voice_client
 
 @bot.command(name='help', aliases=['h'])
 async def help1(ctx: commands.Context):
@@ -181,6 +177,11 @@ async def help1(ctx: commands.Context):
     await ctx.send(embed=embed)
 
 """DEF FUNCTION MULAI DISINI"""
+def get_voice_client_from_channel_id(channel_id: int):
+    for voice_client in bot.voice_clients:
+        if voice_client.channel == channel_id:
+            return voice_client
+
 def after_track(error3, connection, serverid, ctx): #Lanjut ke queue selanjutnya, atau udahan
     if error3 is not None:
         print(error3)
@@ -255,10 +256,10 @@ def get_git_version():
     try:
         subprocess.check_call(['git', 'fetch'])
         version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').strip()
-        updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/main']).decode('utf-8').strip() #compare ke branch main
-    except Exception as e:
+        upversion = subprocess.check_output(['git', 'rev-parse','--short', 'origin/main']).decode('utf-8').strip() #compare ke branch main
+    except subprocess.CalledProcessError:
         return "version unknown"
-    if version != updatever:
+    if version != upversion:
         return f"Ver. {version} 🚨 Update baru tersedia!"
     else:
         return f" Ver. {version} latest"
