@@ -42,8 +42,8 @@ async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening,
                                                         name=f'{PREFIX}play 🎵 | {get_git_version()}'))
 """COMMAND BOT START DISINI"""
-@bot.hybrid_command(name='play', aliases=['p'], description="Putar musik dari judul atau link")
-@app_commands.describe(query="Judul atau link musik")
+@bot.hybrid_command(name='play', aliases=['p'], description="Putar musik dari search youtube")
+@app_commands.describe(query="Judul atau link musik dari youtube")
 @app_commands.guilds(discord.Object(id=guildid))
 async def play(ctx: commands.Context, query: str):
     await ctx.send("testing hybrid command")
@@ -123,7 +123,7 @@ def get_git_version():
     try:
         subprocess.check_call(['git', 'fetch'])
         version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').strip()
-        updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/main']).decode('utf-8').strip()
+        updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/slash']).decode('utf-8').strip() #compare ke branch slash
     except Exception as e:
         return "version unknown"
     if version != updatever:
