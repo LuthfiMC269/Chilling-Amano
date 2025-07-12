@@ -42,6 +42,9 @@ async def play(ctx: commands.Context, *args):
     voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
     if not await uservoice_check(ctx, voice_state=voice_state):
         return
+    if args is None or len(args) == 0:
+        await ctx.send("Masukan judul atau link yang ingin diputar!")
+        return
     if voice_client is not None and serverid not in queues:
         await ctx.send("Pindah ke mode musik, tunggu sebentar..")
         await voice_client.disconnect(force=False)
