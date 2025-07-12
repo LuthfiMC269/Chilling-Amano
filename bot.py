@@ -32,9 +32,9 @@ def main():
 
 @bot.event
 async def on_ready():
-    test_guild = discord.Object(id=guildid) #debugging di test guild
     try:
-        synced = await bot.tree.sync(guild=test_guild) #sinkronisasi instant ke test guild
+        #synced = await bot.tree.sync(guild=discord.Object(id=guildid)) #sinkronisasi instant ke test guild
+        synced = await bot.tree.sync() #comment line atas, dan uncomment line ini untuk global sync, sebaliknya untuk guild sync
         print(f"synced {len(synced)} slash command(s)")
     except Exception as e:
         print(f"error sync command: {e}")
@@ -44,11 +44,160 @@ async def on_ready():
 """COMMAND BOT START DISINI"""
 @bot.hybrid_command(name='play', aliases=['p'], description="Putar musik dari search youtube")
 @app_commands.describe(query="Judul atau link musik dari youtube")
-@app_commands.guilds(discord.Object(id=guildid))
+#@app_commands.guilds(discord.Object(id=guildid)) #comment line ini untuk global sync
 async def play(ctx: commands.Context, query: str):
-    await ctx.send("testing hybrid command")
+    voice_state = ctx.author.voice
+    serverid = ctx.guild.id
+    voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    if not await uservoice_check(ctx, voice_state=voice_state):
+        return
+    if query is None or len(query) == 0:
+        await ctx.send("Masukan judul atau link yang ingin diputar!")
+        return
+    if voice_client is not None and serverid not in queues:
+        await ctx.send("Pindah ke mode musik, tunggu sebentar..")
+        await voice_client.disconnect(force=False)
+    judul = query
+    shorts_pattern = r"(https?://)?(www\.)?youtube\.com/shorts/"
+    if re.search(shorts_pattern, judul):
+        await ctx.send("❌ Jangan pake youtube short yaaa")  # Ngeblokir YT SHORTS, entah kenapa error
+        return
+    kalo_input_judul = not not urlparse(judul).scheme
+    if kalo_input_judul:
+        await ctx.send('Membuka link...')
+    else:
+        await ctx.send(f'Mencari judul `{judul}`...')
+    with yt_dlp.YoutubeDL({'format': 'bestaudio',  # config search dan download
+                           'source_address': '0.0.0.0',
+                           'default_search': 'ytsearch',
+                           'outtmpl': '%(id)s.mp4',
+                           'noplaylist': True,
+                           'allow_playlist_files': False,
+                           'paths': {'home': f'./dl/{serverid}', }}) as ydl:
+        try:
+            data = ydl.extract_info(judul, download=True)  # Mulai Download, ambil link dari extraksi data 'id' ke variabel url
+            if '/shorts/' in data.get('webpage_url', ''):  # Ngeblokir YT SHORTS, entah kenapa error
+                await ctx.send(
+                    "❌ Mesin pencari menemukan link YTShort yang tidak didukung. cari dengan keyword lain atau kirim link youtube")
+                return
+        except yt_dlp.utils.DownloadError as err:
+            await notify_error(ctx, err)
+            return
+        if 'entries' in data:
+            data = data['entries'][0]
+    queue = queues.get(serverid, {}).get('queue', [])
+    if len(queue) >= 1:
+        await ctx.send(f'Masuk antrian! {data["title"]}. Durasi {durasi_fix(data["duration"])}. ')
+    path = f'./dl/{serverid}/{data["id"]}.mp4'
+    try:
+        queues[serverid]['queue'].append((path, data))
+    except KeyError:  # queue pertama
+        queues[serverid] = {'queue': [(path, data)], 'loop': False}
+        try:
+            connection = await voice_state.channel.connect()
+        except discord.ClientException:
+            connection = get_voice_client_from_channel_id(voice_state.channel.id)
+        connection.play(discord.FFmpegOpusAudio(path),
+                        after=lambda error2=None, server_id=serverid:
+                        after_track(error2, connection, server_id, ctx))
+        await send_now_playing_embed(ctx, data)
+
+@bot.hybrid_command(name='radio', aliases=['r'], description="Toggle memutar Radio Jpop")
+#@app_commands.guilds(discord.Object(id=guildid)) #comment line ini untuk global sync
+async def radio(ctx: commands.Context):
+    serverid = ctx.guild.id
+    voice_state = ctx.author.voice
+    radio_url = "https://stream.laut.fm/animefm"
+    voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    if not await uservoice_check(ctx, voice_state=voice_state): return
+    if serverid in queues:
+        try:
+            await ctx.send("Pindah ke Radio, tunggu sebentar...")
+            await voice_client.disconnect(force=False)
+            for path, _ in queues[serverid]['queue']:  # Stop dan hapus semua file
+                try:
+                    os.remove(path)
+                except FileNotFoundError: pass
+        except KeyError: pass
+    try:
+        connection = await voice_state.channel.connect()
+        await ctx.send("📻️ Radio dimainkan")
+        connection.play(discord.FFmpegOpusAudio(radio_url))
+    except discord.ClientException:
+        await voice_client.disconnect(force=False)
+        await ctx.send("⏹️ Keluar dari radio.")
+        return
+
+@bot.hybrid_command(name='skip', aliases=['s'], description="Skip lagu atau hapus semua lagu dari antrian")
+@app_commands.describe(argument="All untuk menghapus semua lagu (optional)")
+#@app_commands.guilds(discord.Object(id=guildid)) #comment line ini untuk global sync
+async def skip(ctx: commands.Context, argument: str=None):
+    serverid = ctx.guild.id
+    voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    voice_state = ctx.author.voice
+    if not await uservoice_check(ctx, voice_state=voice_state):
+        return
+    if voice_client is None and serverid not in queues:
+        await ctx.send("Tidak ada yang sedang diputar.. 😕") #karena lagi ga play apa apa
+        return
+    elif voice_client is not None and serverid not in queues:
+        await ctx.send(f"Jalankan \"{PREFIX}radio\" untuk hentikan radio") #karena ada radio
+        return
+
+    if argument and argument.lower() == 'all': # .skip all
+        try:
+            for path, _ in queues[serverid]['queue']: # Stop dan hapus semua file
+                try: os.remove(path)
+                except FileNotFoundError: pass
+        except KeyError:
+            pass
+
+        queues.pop(serverid, None)
+        await voice_client.disconnect(force=False)
+        await ctx.send("⏹️ Skip semua antrian.")
+        return
+    elif argument is None:
+        queue = queues.get(serverid, {}).get('queue', []) # .skip biasa
+    if len(queue) <= 1: # Cuma ada 1 lagu atau kosong
+        voice_client.stop()
+        await ctx.send("⏹️ Skip lagu, tidak ada antrian lagi.")
+    else:
+        await ctx.send("⏭️ Skip lagu, lanjut ke antrian berikut.")
+        voice_client.stop()
+
+@bot.hybrid_command(name='loop', aliases=['l'], description="Toogle loop lagu yang sedang diputar")
+#@app_commands.guilds(discord.Object(id=guildid)) #comment line ini untuk global sync
+async def loop(ctx: commands.Context):
+    if not await uservoice_check(ctx):
+        return
+    try:
+        loop1 = queues[ctx.guild.id]['loop']
+    except KeyError:
+        await ctx.send('Aku lagi ga pasang lagu apapun 😕')
+        return
+    queues[ctx.guild.id]['loop'] = not loop1
+    await ctx.send('Looping ' + ('dinyalakan' if not loop1 else 'dimatikan'))
+
+@bot.hybrid_command(name='help', aliases=['h'], description="Munculkan quick help guide ")
+#@app_commands.guilds(discord.Object(id=guildid)) #comment line ini untuk global sync
+async def help1(ctx: commands.Context):
+    embed = discord.Embed(
+        color=discord.Color.green(),
+        title='Quick Guide Chilling Amano:')
+    embed.set_thumbnail(url=bot.user.avatar.url)
+    embed.add_field(name=f"{PREFIX}play / p <youtube.links atau cari>",value="Memutar atau memasukan antrian lagu", inline= False)
+    embed.add_field(name=f"{PREFIX}skip / s (all)", value="Skip ke lagu selanjutnya / menghapus semua antrian", inline= False)
+    embed.add_field(name=f"{PREFIX}radio / r", value="Toggle untuk memainkan radio J-POP secara random", inline= False)
+    embed.add_field(name=f"{PREFIX}loop / l", value="Putar lagu yang sedang diputar terus menerus", inline= False)
+    embed.add_field(name=f"{PREFIX}help / h", value="Memunculkan quick help guide commands ini", inline= False)
+    await ctx.send(embed=embed)
 
 """DEF FUNCTION MULAI DISINI"""
+def get_voice_client_from_channel_id(channel_id: int):
+    for voice_client in bot.voice_clients:
+        if voice_client.channel == channel_id:
+            return voice_client
+
 def after_track(error3, connection, serverid, ctx): #Lanjut ke queue selanjutnya, atau udahan
     if error3 is not None:
         print(error3)
@@ -124,7 +273,7 @@ def get_git_version():
         subprocess.check_call(['git', 'fetch'])
         version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').strip()
         updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/slash']).decode('utf-8').strip() #compare ke branch slash
-    except Exception as e:
+    except Exception:
         return "version unknown"
     if version != updatever:
         return f"Ver. {version} 🚨 Update baru tersedia!"
