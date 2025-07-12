@@ -1,13 +1,14 @@
 #import requirements
+import subprocess
 import asyncio
 import os
 import re
 import sys
-from urllib.parse import urlparse
-import discord
 import yt_dlp
+import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 """ENV LOAD"""
 load_dotenv()
@@ -15,9 +16,7 @@ TOKEN = os.getenv('BOT_TOKEN') #Masukin Token BOT DISCORD DISINI
 PREFIX = os.getenv('BOT_PREFIX', '.') #Prefix manggil bot di Discord default titik (.)
 BOT_REPORT_DL_ERROR = os.getenv('BOT_REPORT_DL_ERROR', '0').lower() in ('true', 't', '1')
 """END ENV LOAD"""
-
-bot = commands.Bot(command_prefix=PREFIX, #define bot dc
-                   intents=discord.Intents(voice_states=True, guilds=True, guild_messages=True, message_content=True))
+bot = commands.Bot(command_prefix=PREFIX, intents=discord.Intents.all()) #define bot
 bot.remove_command('help')
 queues = {} #antrian playlist
 
@@ -32,8 +31,8 @@ def main():
 @bot.event
 async def on_ready():
     print(f'berhasil login dengan nama bot: {bot.user.name}')
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=f'{PREFIX}play 🎵'))
-
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening,
+                                                        name=f'{PREFIX}play 🎵 | {get_git_version()}'))
 """COMMAND BOT START DISINI"""
 @bot.command(name='play', aliases=['p'])
 async def play(ctx: commands.Context, *args):
@@ -116,7 +115,6 @@ async def radio(ctx: commands.Context):
         await voice_client.disconnect(force=False)
         await ctx.send("⏹️ Keluar dari radio.")
         return
-
 
 @bot.command(name='skip', aliases=['s'])
 async def skip(ctx: commands.Context, *args):
@@ -252,8 +250,20 @@ async def notify_error(ctx: commands.Context, err: yt_dlp.utils.DownloadError):
     else:
         await ctx.send('Maaf gagal memutar lagu 😓')
     return
-"""BOT DIBUAT OLEH LuthfiMC269:) check me out di https://github.com/LuthfiMC269/Chilling-Amano"""
 
+def get_git_version():
+    try:
+        subprocess.check_call(['git', 'fetch'])
+        version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
+        updatever = subprocess.check_output(['git', 'rev-parse', 'origin/main']).decode().strip()
+    except Exception as e:
+        return "version unknown"
+    if version != updatever:
+        return f"Ver. {version} 🚨 Update baru tersedia!"
+    else:
+        return f" Ver. {version}"
+
+"""BOT DIBUAT OLEH LuthfiMC269:) check me out di https://github.com/LuthfiMC269/Chilling-Amano"""
 if __name__ == '__main__':
     try:
         sys.exit(main())
