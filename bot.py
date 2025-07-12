@@ -255,7 +255,7 @@ def get_git_version():
     try:
         subprocess.check_call(['git', 'fetch'])
         version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').strip()
-        updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/main']).decode('utf-8').strip()
+        updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/main']).decode('utf-8').strip() #compare ke branch main
     except Exception as e:
         return "version unknown"
     if version != updatever:
