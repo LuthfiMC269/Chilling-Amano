@@ -80,6 +80,9 @@ async def play(ctx: commands.Context, query: str):
                 await ctx.send(
                     "❌ Mesin pencari menemukan link YTShort yang tidak didukung. cari dengan keyword lain atau kirim link youtube")
                 return
+            elif data["duration"] > 7200:
+                await ctx.send("Njir 2 Jam, cari yang lain ya :)")
+                return
         except yt_dlp.utils.DownloadError as err:
             await notify_error(ctx, err)
             return
