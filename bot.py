@@ -80,18 +80,20 @@ async def play(ctx: commands.Context, query: str):
                 await ctx.send(
                     "❌ Mesin pencari menemukan link YTShort yang tidak didukung. cari dengan keyword lain atau kirim link youtube")
                 return
-            elif data["duration"] > 7200:
-                await ctx.send("Njir 2 Jam, cari yang lain ya :)")
-                return
         except yt_dlp.utils.DownloadError as err:
             await notify_error(ctx, err)
             return
         if 'entries' in data:
             data = data['entries'][0]
     queue = queues.get(serverid, {}).get('queue', [])
+    path = f'./dl/{serverid}/{data["id"]}.mp4'
+    if data.get("duration", 0) > 7200:
+        if os.path.exists(path):
+            os.remove(path)
+        await ctx.send(f"Njir lebih dari dua jam, cari yang lain ya :)")
+        return
     if len(queue) >= 1:
         await ctx.send(f'Masuk antrian! {data["title"]}. Durasi {durasi_fix(data["duration"])}. ')
-    path = f'./dl/{serverid}/{data["id"]}.mp4'
     try:
         queues[serverid]['queue'].append((path, data))
     except KeyError:  # queue pertama
@@ -154,7 +156,6 @@ async def skip(ctx: commands.Context, argument: str=None):
                 except FileNotFoundError: pass
         except KeyError:
             pass
-
         queues.pop(serverid, None)
         await voice_client.disconnect(force=False)
         await ctx.send("⏹️ Skip semua antrian.")
@@ -276,8 +277,8 @@ def get_git_version():
         subprocess.check_call(['git', 'fetch'])
         version = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').strip()
         updatever = subprocess.check_output(['git', 'rev-parse','--short', 'origin/slash']).decode('utf-8').strip() #compare ke branch slash
-    except Exception:
-        return "version unknown"
+    except Exception as err:
+        return f"version unknown /Error! {err}"
     if version != updatever:
         return f"Ver. {version} 🚨 Update baru tersedia!"
     else:
