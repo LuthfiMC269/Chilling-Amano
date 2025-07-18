@@ -73,9 +73,13 @@ async def play(ctx: commands.Context, query: str):
                            'outtmpl': '%(id)s.mp4',
                            'noplaylist': True,
                            'allow_playlist_files': False,
+                           'match_filter':only_allow_youtube,
                            'paths': {'home': f'./dl/{serverid}', }}) as ydl:
         try:
             data = ydl.extract_info(judul, download=True)  # Mulai Download, ambil link dari extraksi data 'id' ke variabel url
+            if data.get('extractor') != 'youtube':
+                await ctx.send("Kasih aku link youtube yaaaaaaaa")
+                return
             if '/shorts/' in data.get('webpage_url', ''):  # Ngeblokir YT SHORTS, entah kenapa error
                 await ctx.send(
                     "❌ Mesin pencari menemukan link YTShort yang tidak didukung. cari dengan keyword lain atau kirim link youtube")
@@ -271,6 +275,11 @@ async def notify_error(ctx: commands.Context, err: yt_dlp.utils.DownloadError):
     else:
         await ctx.send('Maaf gagal memutar lagu 😓')
     return
+
+def only_allow_youtube(info_dict):
+    if info_dict.get("extractor") != "youtube":
+        return "❌ Hanya YouTube yang didukung"
+    return None
 
 def get_git_version():
     try:
