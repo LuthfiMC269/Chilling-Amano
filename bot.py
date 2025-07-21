@@ -77,9 +77,10 @@ async def play(ctx: commands.Context, query: str):
                            'paths': {'home': f'./dl/{serverid}', }}) as ydl:
         try:
             data = ydl.extract_info(judul, download=True)  # Mulai Download, ambil link dari extraksi data 'id' ke variabel url
-            if data.get('extractor') != 'youtube':
-                await ctx.send("Kasih aku link youtube yaaaaaaaa")
-                return
+            if not kalo_input_judul: # ngeblokir link selain youtube
+                if data.get('extractor') != 'youtube':
+                    await ctx.send("Kasih aku link youtube yaaaaaaaa")
+                    return
             if '/shorts/' in data.get('webpage_url', ''):  # Ngeblokir YT SHORTS, entah kenapa error
                 await ctx.send(
                     "❌ Mesin pencari menemukan link YTShort yang tidak didukung. cari dengan keyword lain atau kirim link youtube")
